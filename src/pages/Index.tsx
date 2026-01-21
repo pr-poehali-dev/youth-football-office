@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,8 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type UserRole = 'parent' | 'player' | 'coach' | 'admin' | null;
 
@@ -58,6 +60,17 @@ const mockNotifications = [
   { id: 1, title: 'Товарищеский матч', text: 'Игра с командой "Юниор" в субботу в 14:00', time: '2 часа назад', type: 'info' },
   { id: 2, title: 'Новое достижение!', text: 'Поздравляем! Вы получили значок "Прогресс недели"', time: '1 день назад', type: 'success' },
   { id: 3, title: 'Домашнее задание', text: 'Тренер добавил новые упражнения', time: '2 дня назад', type: 'warning' },
+];
+
+const mockTeamPlayers = [
+  { id: 1, name: 'Александр Иванов', age: 12, position: 'Нападающий', number: 10, avatar: '', skillLevel: 82, attendance: 95, goals: 12 },
+  { id: 2, name: 'Дмитрий Петров', age: 11, position: 'Защитник', number: 5, avatar: '', skillLevel: 76, attendance: 88, goals: 2 },
+  { id: 3, name: 'Михаил Сидоров', age: 13, position: 'Полузащитник', number: 8, avatar: '', skillLevel: 79, attendance: 92, goals: 7 },
+  { id: 4, name: 'Андрей Кузнецов', age: 12, position: 'Вратарь', number: 1, avatar: '', skillLevel: 85, attendance: 98, goals: 0 },
+  { id: 5, name: 'Егор Смирнов', age: 11, position: 'Нападающий', number: 11, avatar: '', skillLevel: 73, attendance: 85, goals: 9 },
+  { id: 6, name: 'Никита Попов', age: 13, position: 'Защитник', number: 4, avatar: '', skillLevel: 80, attendance: 90, goals: 3 },
+  { id: 7, name: 'Артём Волков', age: 12, position: 'Полузащитник', number: 7, avatar: '', skillLevel: 77, attendance: 87, goals: 5 },
+  { id: 8, name: 'Максим Новиков', age: 11, position: 'Нападающий', number: 9, avatar: '', skillLevel: 81, attendance: 93, goals: 11 },
 ];
 
 const LoginScreen = ({ onLogin }: { onLogin: (role: UserRole) => void }) => {
@@ -113,6 +126,28 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: UserRole) => void }) => {
 const Index = () => {
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [activeTab, setActiveTab] = useState('profile');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterPosition, setFilterPosition] = useState('all');
+  const [sortBy, setSortBy] = useState('number');
+
+  const filteredPlayers = useMemo(() => {
+    const filtered = mockTeamPlayers.filter(player => {
+      const matchesSearch = player.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            player.number.toString().includes(searchQuery);
+      const matchesPosition = filterPosition === 'all' || player.position === filterPosition;
+      return matchesSearch && matchesPosition;
+    });
+
+    filtered.sort((a, b) => {
+      if (sortBy === 'number') return a.number - b.number;
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'skill') return b.skillLevel - a.skillLevel;
+      if (sortBy === 'attendance') return b.attendance - a.attendance;
+      return 0;
+    });
+
+    return filtered;
+  }, [searchQuery, filterPosition, sortBy]);
 
   if (!userRole) {
     return <LoginScreen onLogin={setUserRole} />;
@@ -154,11 +189,17 @@ const Index = () => {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-5 gap-2 bg-card/50 p-2">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-6 gap-2 bg-card/50 p-2">
             <TabsTrigger value="profile" className="data-[state=active]:bg-football-green">
               <Icon name="User" size={18} className="mr-2" />
               <span className="hidden sm:inline">Профиль</span>
             </TabsTrigger>
+            {(userRole === 'coach' || userRole === 'admin') && (
+              <TabsTrigger value="team" className="data-[state=active]:bg-football-gold">
+                <Icon name="Users" size={18} className="mr-2" />
+                <span className="hidden sm:inline">Команда</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="schedule" className="data-[state=active]:bg-football-blue">
               <Icon name="Calendar" size={18} className="mr-2" />
               <span className="hidden sm:inline">Расписание</span>
@@ -178,6 +219,148 @@ const Index = () => {
               </TabsTrigger>
             )}
           </TabsList>
+
+          {(userRole === 'coach' || userRole === 'admin') && (
+            <TabsContent value="team" className="space-y-6 animate-fade-in">
+              <Card className="border-2 border-football-gold/20">
+                <CardHeader>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Icon name="Users" size={24} className="text-football-gold" />
+                        Управление командой
+                      </CardTitle>
+                      <CardDescription>Полный список игроков с возможностью управления</CardDescription>
+                    </div>
+                    <Button className="bg-football-green hover:bg-emerald-600">
+                      <Icon name="UserPlus" size={16} className="mr-2" />
+                      Добавить игрока
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Поиск</label>
+                      <div className="relative">
+                        <Icon name="Search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input 
+                          placeholder="Имя или номер..." 
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Позиция</label>
+                      <Select value={filterPosition} onValueChange={setFilterPosition}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Все позиции</SelectItem>
+                          <SelectItem value="Нападающий">Нападающий</SelectItem>
+                          <SelectItem value="Полузащитник">Полузащитник</SelectItem>
+                          <SelectItem value="Защитник">Защитник</SelectItem>
+                          <SelectItem value="Вратарь">Вратарь</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Сортировка</label>
+                      <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="number">По номеру</SelectItem>
+                          <SelectItem value="name">По имени</SelectItem>
+                          <SelectItem value="skill">По навыкам</SelectItem>
+                          <SelectItem value="attendance">По посещаемости</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Найдено игроков</label>
+                      <div className="h-10 flex items-center justify-center bg-muted rounded-md font-bold text-lg">
+                        {filteredPlayers.length}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {filteredPlayers.map((player) => (
+                      <Card key={player.id} className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-football-green/50">
+                        <CardContent className="p-4 space-y-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex gap-3">
+                              <Avatar className="w-14 h-14 border-2 border-football-green">
+                                <AvatarFallback className="bg-gradient-to-br from-football-green to-football-blue text-white font-bold">
+                                  {player.name.split(' ').map(n => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <h4 className="font-bold text-sm">{player.name}</h4>
+                                <p className="text-xs text-muted-foreground">{player.age} лет</p>
+                                <Badge variant="outline" className="mt-1 text-xs">{player.position}</Badge>
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <div className="w-10 h-10 rounded-full bg-football-gold flex items-center justify-center font-bold text-white">
+                                #{player.number}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Навыки</span>
+                              <span className="font-bold text-football-blue">{player.skillLevel}%</span>
+                            </div>
+                            <Progress value={player.skillLevel} className="h-2" />
+                            
+                            <div className="grid grid-cols-2 gap-2 pt-2">
+                              <div className="text-center p-2 rounded-lg bg-football-green/10">
+                                <p className="text-xs text-muted-foreground">Посещаемость</p>
+                                <p className="font-bold text-football-green">{player.attendance}%</p>
+                              </div>
+                              <div className="text-center p-2 rounded-lg bg-football-gold/10">
+                                <p className="text-xs text-muted-foreground">Голы</p>
+                                <p className="font-bold text-football-gold">{player.goals}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="flex-1">
+                              <Icon name="Eye" size={14} className="mr-1" />
+                              Профиль
+                            </Button>
+                            <Button size="sm" className="flex-1 bg-football-blue hover:bg-cyan-600">
+                              <Icon name="Edit" size={14} className="mr-1" />
+                              Изменить
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {filteredPlayers.length === 0 && (
+                    <div className="text-center py-12">
+                      <Icon name="Users" size={48} className="mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">Игроки не найдены</p>
+                      <Button className="mt-4 bg-football-green hover:bg-emerald-600">
+                        <Icon name="UserPlus" size={16} className="mr-2" />
+                        Добавить первого игрока
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           <TabsContent value="profile" className="space-y-6 animate-fade-in">
             <div className="grid gap-6 lg:grid-cols-3">
